@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>保育園 休園チェッカー（日高乳児園）</title>
+<style>
+  :root{
+    --bg:#f4f6f9; --card:#fff; --ink:#1f2937; --sub:#6b7280;
+    --line:#e5e7eb; --accent:#2563eb; --accent-d:#1d4ed8;
+    --close:#dc2626; --close-bg:#fef2f2; --close-line:#fca5a5;
+    --open:#16a34a; --open-bg:#f0fdf4; --open-line:#86efac;
+    --warn:#d97706; --warn-bg:#fffbeb; --warn-line:#fcd34d;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:"Segoe UI","Meiryo","Hiragino Kaku Gothic ProN",sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.7;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:560px; margin:0 auto; padding:16px 14px 60px;}
+  header h1{font-size:1.25rem; margin:.2em 0 .1em;}
+  header p{margin:.1em 0; color:var(--sub); font-size:.82rem;}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:16px; margin:14px 0; box-shadow:0 1px 3px rgba(0,0,0,.04);
+  }
+  .q{font-weight:700; font-size:1.05rem; margin:0 0 12px;}
+  .step{font-size:.75rem; color:var(--accent); font-weight:700; letter-spacing:.04em;}
+  .opts{display:flex; flex-direction:column; gap:10px;}
+  button.opt{
+    text-align:left; background:#fff; border:1.5px solid var(--line);
+    border-radius:12px; padding:13px 14px; font-size:.98rem; cursor:pointer;
+    color:var(--ink); transition:.12s; line-height:1.5;
+  }
+  button.opt:hover{border-color:var(--accent); background:#f8fbff;}
+  button.opt:active{transform:scale(.99);}
+  button.opt .sub{display:block; font-size:.78rem; color:var(--sub); margin-top:2px;}
+  .result{border-radius:14px; padding:18px 16px; margin:14px 0;}
+  .result.close{background:var(--close-bg); border:1.5px solid var(--close-line);}
+  .result.open{background:var(--open-bg); border:1.5px solid var(--open-line);}
+  .result.warn{background:var(--warn-bg); border:1.5px solid var(--warn-line);}
+  .verdict{font-size:1.5rem; font-weight:800; margin:0 0 6px; display:flex; align-items:center; gap:8px;}
+  .result.close .verdict{color:var(--close);}
+  .result.open .verdict{color:var(--open);}
+  .result.warn .verdict{color:var(--warn);}
+  .result p{margin:.4em 0; font-size:.95rem;}
+  .result .detail{background:rgba(255,255,255,.6); border-radius:10px; padding:10px 12px; margin-top:10px; font-size:.88rem;}
+  .reopen{
+    background:#eef2ff; border:1px dashed #c7d2fe; border-radius:10px;
+    padding:10px 12px; margin-top:12px; font-size:.85rem; color:#3730a3;
+  }
+  .reopen b{color:#312e81;}
+  .actions{display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;}
+  .btn{
+    flex:1; min-width:130px; text-align:center; border:none; border-radius:10px;
+    padding:12px; font-size:.92rem; font-weight:700; cursor:pointer;
+  }
+  .btn.primary{background:var(--accent); color:#fff;}
+  .btn.primary:active{background:var(--accent-d);}
+  .btn.ghost{background:#fff; color:var(--ink); border:1.5px solid var(--line);}
+  .back{
+    background:none; border:none; color:var(--accent); cursor:pointer;
+    font-size:.88rem; padding:4px 0; margin-bottom:4px;
+  }
+  .ref{
+    margin-top:18px; font-size:.78rem; color:var(--sub);
+    background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 14px;
+  }
+  .ref summary{cursor:pointer; font-weight:700; color:var(--ink);}
+  .ref table{width:100%; border-collapse:collapse; margin-top:8px; font-size:.78rem;}
+  .ref th,.ref td{border:1px solid var(--line); padding:5px 7px; text-align:left; vertical-align:top;}
+  .ref th{background:#f8fafc;}
+  .disclaimer{font-size:.74rem; color:var(--sub); margin-top:18px; line-height:1.6;}
+  .tag{display:inline-block; font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:999px; margin-left:auto;}
+  .tag.l5{background:#fee2e2; color:#b91c1c;}
+  .tag.l4{background:#ffedd5; color:#c2410c;}
+  .tag.l3{background:#fef9c3; color:#a16207;}
+
+  /* 自動判定パネル */
+  .auto{border-radius:14px; padding:16px; margin:14px 0; border:1.5px solid var(--line); background:#fff; transition:.2s;}
+  .auto.close{background:var(--close-bg); border-color:var(--close-line);}
+  .auto.open{background:var(--open-bg); border-color:var(--open-line);}
+  .auto.warn{background:var(--warn-bg); border-color:var(--warn-line);}
+  .auto.error{background:#f9fafb;}
+  .auto-head{display:flex; align-items:center; gap:8px; margin-bottom:10px;}
+  .auto-title{font-size:.8rem; font-weight:700; color:var(--sub);}
+  .reload{margin-left:auto; background:#fff; border:1px solid var(--line); border-radius:8px;
+    width:34px; height:34px; font-size:1.1rem; cursor:pointer; color:var(--ink); line-height:1;}
+  .reload:active{transform:rotate(180deg);}
+  .auto.loading .reload{animation:spin 1s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .auto-verdict{font-size:1.45rem; font-weight:800; line-height:1.35; display:flex; align-items:center; gap:8px;}
+  .auto.close .auto-verdict{color:var(--close);}
+  .auto.open .auto-verdict{color:var(--open);}
+  .auto.warn .auto-verdict{color:var(--warn);}
+  .auto-reason{margin-top:8px; font-size:.92rem; color:var(--ink);}
+  .auto-warnings{margin-top:10px; display:flex; flex-wrap:wrap; gap:6px;}
+  .wbadge{font-size:.78rem; font-weight:700; padding:3px 9px; border-radius:999px; background:#fff; border:1px solid var(--line);}
+  .wbadge.special{background:#fee2e2; color:#b91c1c; border-color:#fca5a5;}
+  .wbadge.warning{background:#ffedd5; color:#c2410c; border-color:#fdba74;}
+  .wbadge.advisory{background:#f1f5f9; color:#475569; border-color:#cbd5e1;}
+  .auto-meta{margin-top:10px; font-size:.72rem; color:var(--sub); line-height:1.5;}
+  .auto-meta a{color:var(--accent);}
+  .auto-note{margin-top:10px; font-size:.78rem; color:var(--sub); background:rgba(255,255,255,.6); border-radius:8px; padding:8px 10px;}
+
+  /* タイムライン */
+  .tlcard{background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin:14px 0;}
+  .tlcard>summary{cursor:pointer; font-weight:700; font-size:.92rem; color:var(--ink); list-style:none;}
+  .tlcard>summary::-webkit-details-marker{display:none;}
+  .tlcard>summary::before{content:'▶ '; color:var(--sub); font-size:.8em;}
+  .tlcard[open]>summary::before{content:'▼ ';}
+  .tl-sec{margin-top:12px;}
+  .tl-sec h3{font-size:.82rem; margin:0 0 8px; color:var(--accent); border-bottom:1px solid var(--line); padding-bottom:4px;}
+  .tl-empty{font-size:.82rem; color:var(--sub); margin:4px 0;}
+  .tl-note{font-size:.74rem; color:var(--sub); margin:4px 0 8px;}
+  .tl-row{display:flex; align-items:flex-start; gap:8px; padding:7px 0; border-bottom:1px dashed var(--line);}
+  .tl-row:last-child{border-bottom:none;}
+  .tl-time{flex:0 0 auto; font-size:.78rem; color:var(--sub); min-width:118px; line-height:1.6; font-variant-numeric:tabular-nums;}
+  .tl-body{flex:1; min-width:0;}
+  .tl-codes{font-size:.8rem; color:var(--ink); margin-top:2px; word-break:break-word;}
+  .tl-codes .none{color:var(--sub);}
+  .chip{display:inline-block; font-size:.74rem; font-weight:700; padding:2px 9px; border-radius:999px; white-space:nowrap;}
+  .chip.close{background:var(--close-bg); color:var(--close); border:1px solid var(--close-line);}
+  .chip.warn{background:var(--warn-bg); color:var(--warn); border:1px solid var(--warn-line);}
+  .chip.open{background:var(--open-bg); color:var(--open); border:1px solid var(--open-line);}
+  .tl-now{background:#eff6ff; border-radius:8px; padding:2px 6px; margin:0 -6px;}
+  .tl-summary{border-radius:10px; padding:10px 12px; margin:0 0 12px; border:1.5px solid var(--line);}
+  .tl-summary.close{background:var(--close-bg); border-color:var(--close-line);}
+  .tl-summary.warn{background:var(--warn-bg); border-color:var(--warn-line);}
+  .tl-summary.open{background:var(--open-bg); border-color:var(--open-line);}
+  .tl-sum-h{font-size:.8rem; font-weight:700; color:var(--sub);}
+  .tl-sum-v{font-size:1.02rem; font-weight:800; margin:5px 0 2px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🏫 保育園 休園チェッカー</h1>
+    <p>令和8年度 日高乳児園「入園のしおり」の基準にもとづく目安です</p>
+  </header>
+
+  <!-- 自動判定パネル -->
+  <div id="auto" class="auto loading">
+    <div class="auto-head">
+      <span class="auto-title">📡 いまの刈谷市の状況（自動判定）</span>
+      <button id="reload" class="reload" title="再取得" onclick="loadAuto()">⟳</button>
+    </div>
+    <div id="autoBody">
+      <div class="auto-verdict">気象庁の警報情報を取得中…</div>
+    </div>
+    <div id="autoMeta" class="auto-meta"></div>
+  </div>
+
+  <!-- 今日の警報の経緯（履歴） -->
+  <details id="histWrap" class="tlcard" open style="display:none">
+    <summary>📜 今日の警報の経緯（暴風警報などの発表・解除）</summary>
+    <div id="history"></div>
+  </details>
+
+  <!-- 今後の見通し -->
+  <details id="tlWrap" class="tlcard" open>
+    <summary>📈 今後の見通し（暴風の予想・午後の開園/休園の目安）</summary>
+    <div id="timeline"><p class="tl-empty">取得中…</p></div>
+  </details>
+
+  <div id="app"></div>
+
+  <details class="ref">
+    <summary>📋 休園基準の早見表（しおり要約）</summary>
+    <table>
+      <tr><th>状況</th><th>扱い</th></tr>
+      <tr><td>日曜・祝日・年末年始(12/29〜1/3)</td><td>休園</td></tr>
+      <tr><td>特別警報（レベル5）が当日午前中に発表中</td><td>休園</td></tr>
+      <tr><td>暴風警報 発表中</td><td>休園（解除されれば登園可）</td></tr>
+      <tr><td>大雨警報（レベル3）</td><td>開園（危険なら安全になるまで保育）</td></tr>
+      <tr><td>刈谷市で震度6弱以上の地震</td><td>休園</td></tr>
+      <tr><td>大津波・津波警報（該当区域）</td><td>休園・避難</td></tr>
+      <tr><td>南海トラフ「調査中／巨大地震警戒」</td><td>速やかにお迎え</td></tr>
+      <tr><td>南海トラフ「巨大地震注意」</td><td>通常どおり保育</td></tr>
+      <tr><td>河川の避難情報レベル3/4（該当区域）</td><td>休園・自宅待機</td></tr>
+    </table>
+    <p style="margin-top:10px"><b>再開の基準：</b>解除後はすぐ登園可。ただし他の警報が解除されていなければ自宅待機。<b>解除が16:30以後ならその日は休園</b>。</p>
+  </details>
+
+  <p class="disclaimer">
+    ※これは「入園のしおり（令和8年度 日高乳児園）」の記載を整理した<b>非公式の確認補助ツール</b>です。実際の休園・再開の判断や連絡は、園および「刈谷市メール配信サービス」の案内に従ってください。<br>
+    連絡は刈谷市メール配信サービスで届きます。園名入りの個別連絡は来ない場合があります。
+  </p>
+</div>
+
+<script>
+// ====== 質問・結果データ ======
+const REOPEN = `<div class="reopen"><b>🔁 再開の目安：</b>警報が解除されたら、すぐ登園してOKです。ただし他に登園を控える警報が残っている場合は自宅待機。<b>解除が16:30以後なら、その日は休園</b>になります。</div>`;
+
+// 結果テンプレ
+function R(type, verdict, lead, detail, withReopen){
+  const icon = type==='close' ? '🚫' : type==='open' ? '✅' : '⚠️';
+  return {
+    result:true, type,
+    html:`<div class="result ${type}">
+      <div class="verdict">${icon} ${verdict}</div>
+      <p>${lead}</p>
+      ${detail?`<div class="detail">${detail}</div>`:''}
+      ${withReopen?REOPEN:''}
+    </div>`
+  };
+}
+
+const NODES = {
+  start:{
+    q:'今の状況にいちばん近いものは？',
+    step:'STEP 1 / 状況の種類',
+    opts:[
+      {t:'気象警報（大雨・暴風・特別警報など）', s:'台風・大雨・暴風・大雪のとき', go:'weather'},
+      {t:'地震があった', s:'刈谷市で揺れたとき', go:'quake'},
+      {t:'津波警報・注意報が出た', s:'海・津波関連', go:'tsunami'},
+      {t:'南海トラフ地震臨時情報', s:'「調査中」「巨大地震警戒/注意」', go:'nankai'},
+      {t:'河川の避難情報（レベル3・4）', s:'川の増水・氾濫のおそれ', go:'river'},
+      {t:'日付の確認（日曜・祝日・年末年始）', s:'定例の休園日かどうか', go:'calendar'},
+    ]
+  },
+
+  // ---- 気象警報 ----
+  weather:{
+    q:'どの種類の警報ですか？',
+    step:'STEP 2 / 気象警報',
+    opts:[
+      {t:'特別警報', tag:'l5', s:'大雨・暴風・暴風雪・大雪などの特別警報（最高レベル）', go:'w_special'},
+      {t:'暴風警報', tag:'l4', s:'いわゆる暴風（風）の警報', go:'w_storm'},
+      {t:'大雨警報', tag:'l3', s:'特別警報ではない大雨警報', go:'w_rain'},
+      {t:'注意報・その他の警報', s:'上記以外（注意報レベルなど）', go:'w_other'},
+    ]
+  },
+  w_special:{
+    q:'いつの時点で発表されていますか？',
+    step:'特別警報',
+    opts:[
+      {t:'今日の午前中の時点で発表中', s:'登園前', res:()=>R('close','休園です','登園日の午前中の時点で特別警報が発表されている場合は休園です。',null,true)},
+      {t:'登園した後に発表された', s:'登園後', res:()=>R('close','休園・お迎えを','休園になります。速やかにお迎えに来てください。引き渡しまでは園内の安全な場所でお子さんを保護します。',null,true)},
+    ]
+  },
+  w_storm:{
+    q:'暴風警報は今どうなっていますか？',
+    step:'暴風警報',
+    opts:[
+      {t:'発表中（まだ解除されていない）', s:'警報が出ている', res:()=>R('close','休園です','暴風警報が発表中の間は休園です。','警報が解除されれば登園できます（解除されるまでは自宅でお待ちください）。',true)},
+      {t:'解除された', s:'警報が消えた', res:()=>R('open','登園できます','暴風警報が解除されたので登園できます。','他に登園を控える警報が残っている場合は自宅待機。解除がかなり遅い時間（夕方以降）ならその日は休園です。',false)},
+      {t:'登園した後に発表された', s:'預けた後に発表', res:()=>R('close','お迎えを','速やかにお迎えに来てください。引き渡しまでは園内の安全な場所でお子さんを保護します。',null,true)},
+    ]
+  },
+  w_rain:{ res:()=>R('open','開園します','大雨警報（レベル3）では開園します。','ただし登園が危険な場合は、安全に登園できるようになるまで園でお預かり・保育します。連絡は刈谷市メール配信サービスで行われます。',true) },
+  w_other:{ res:()=>R('open','通常どおりの見込み','注意報レベルや、休園基準に該当しない警報では、原則として休園にはなりません。','心配な気象状況のときは刈谷市メール配信サービスの「警報以上」の通知と、園からの連絡を確認してください。',false) },
+
+  // ---- 地震 ----
+  quake:{
+    q:'刈谷市の震度は6弱以上ですか？',
+    step:'STEP 2 / 地震',
+    opts:[
+      {t:'震度6弱以上だった', s:'刈谷市で観測', go:'q_strong'},
+      {t:'震度5強以下だった', s:'6弱に達していない', res:()=>R('open','原則は通常対応','震度6弱以上に達していなければ、しおりの自動休園基準には該当しません。','建物や周辺の安全確認のうえ、園の判断・連絡に従ってください。',false)},
+    ]
+  },
+  q_strong:{
+    q:'いつの時点ですか？',
+    step:'震度6弱以上',
+    opts:[
+      {t:'登園前', s:'まだ登園していない', res:()=>R('close','休園です','刈谷市で震度6弱以上の地震が発生した場合は休園です。','再開は安全を確認したうえで、メール配信で連絡されます。',false)},
+      {t:'登園後', s:'すでに預けている', res:()=>R('close','お迎えを','速やかにお迎えに来てください。安全に引き渡しできる場所でお子さんを保護します。','再開は安全確認後にメール配信で連絡されます。',false)},
+    ]
+  },
+
+  // ---- 津波 ----
+  tsunami:{ res:()=>R('close','該当区域は休園・避難','大津波警報・津波警報が出て、対象区域に園が含まれる場合は休園し避難します。','対象区域や引き渡し場所はしおりの一覧に指定があります。園・市の指示に従って行動してください。',true) },
+
+  // ---- 南海トラフ ----
+  nankai:{
+    q:'発表された情報は？',
+    step:'STEP 2 / 南海トラフ臨時情報',
+    opts:[
+      {t:'「調査中」または「巨大地震警戒」', s:'警戒度が高い情報', res:()=>R('warn','注意・お迎えを','注意しながら、速やかにお迎えに来てください。その後の対応はメール配信などで連絡されます。',null,false)},
+      {t:'「巨大地震注意」', s:'注意レベル', res:()=>R('open','通常どおり保育','通常どおり保育を実施・継続します。','念のため最新の情報と園からの連絡を確認してください。',false)},
+    ]
+  },
+
+  // ---- 河川 ----
+  river:{
+    q:'園のある区域に発令されているレベルは？',
+    step:'STEP 2 / 河川の避難情報',
+    opts:[
+      {t:'警戒レベル3（高齢者等避難）', tag:'l3', s:'該当区域の園', res:()=>R('close','休園・自宅待機','該当区域に発令された場合は休園（自宅待機）になります。',null,true)},
+      {t:'警戒レベル4（避難指示）', tag:'l4', s:'該当区域の園', res:()=>R('close','休園・自宅待機','該当区域に発令された場合は休園（自宅待機）になります。',null,true)},
+      {t:'発令されていない／対象区域外', s:'', res:()=>R('open','原則は通常対応','園の区域に避難情報が出ていなければ、河川を理由とした休園にはなりません。','刈谷市メール配信サービスの避難情報と園の連絡を確認してください。',false)},
+    ]
+  },
+
+  // ---- カレンダー ----
+  calendar:{ res:()=>R('close','定例の休園日','日曜・祝日、および年末年始（12月29日〜1月3日）は休園です。','土曜は開園（11:30まで）。それ以外の平日は通常保育です。',false) },
+};
+
+// ====== 画面制御 ======
+const app = document.getElementById('app');
+let stack = ['start'];
+
+function render(){
+  const key = stack[stack.length-1];
+  const node = NODES[key];
+  // 結果ノード（resを直接持つ or res関数）
+  if(node.res){ showResult(node.res()); return; }
+  if(node.result){ showResult(node); return; }
+
+  let html = '';
+  if(stack.length>1){ html += `<button class="back" onclick="goBack()">← もどる</button>`; }
+  html += `<div class="card">
+    <div class="step">${node.step||''}</div>
+    <p class="q">${node.q}</p>
+    <div class="opts">`;
+  node.opts.forEach((o,i)=>{
+    const tag = o.tag?`<span class="tag ${o.tag}">${o.tag.toUpperCase()}</span>`:'';
+    html += `<button class="opt" onclick="choose(${i})">
+      <span style="display:flex;align-items:center;gap:6px">${o.t}${tag}</span>
+      ${o.s?`<span class="sub">${o.s}</span>`:''}
+    </button>`;
+  });
+  html += `</div></div>`;
+  app.innerHTML = html;
+  window.scrollTo(0,0);
+}
+
+function showResult(r){
+  let html = `<button class="back" onclick="goBack()">← もどる</button>` + r.html;
+  html += `<div class="actions">
+    <button class="btn primary" onclick="restart()">最初からやり直す</button>
+  </div>`;
+  app.innerHTML = html;
+  window.scrollTo(0,0);
+}
+
+let pendingResult = null;
+function choose(i){
+  const node = NODES[stack[stack.length-1]];
+  const o = node.opts[i];
+  if(o.go){ stack.push(o.go); render(); }
+  else if(o.res){
+    // 結果を一時ノードとして積む
+    NODES.__tmp = {res:o.res};
+    stack.push('__tmp');
+    render();
+  }
+}
+function goBack(){ if(stack.length>1){ stack.pop(); render(); } }
+function restart(){ stack=['start']; render(); }
+
+render();
+
+// ====== 自動判定（気象庁の警報を取得） ======
+const KARIYA_CODE = '2321000';            // 刈谷市（市町村コード）
+const CURRENT_URL = '/warning';           // 同一オリジンのPages Function（最新の警報XMLを刈谷市で抽出）
+const WARNING_URL = 'https://www.jma.go.jp/bosai/warning/data/warning/230000.json'; // 愛知県（見通し/フォールバック用）
+const HOLIDAY_URL = 'https://holidays-jp.github.io/api/v1/date.json';
+
+// 警報・注意報コード表
+const WCODE = {
+  // 特別警報
+  '32':{n:'大雪特別警報',k:'special'}, '33':{n:'大雨特別警報',k:'special'},
+  '35':{n:'暴風特別警報',k:'special'}, '36':{n:'暴風雪特別警報',k:'special'},
+  '37':{n:'高潮特別警報',k:'special'}, '38':{n:'波浪特別警報',k:'special'},
+  // 警報
+  '02':{n:'暴風雪警報',k:'warning'}, '03':{n:'大雨警報',k:'warning'},
+  '04':{n:'洪水警報',k:'warning'}, '05':{n:'暴風警報',k:'warning'},
+  '06':{n:'大雪警報',k:'warning'}, '07':{n:'波浪警報',k:'warning'},
+  '08':{n:'高潮警報',k:'warning'},
+  // 注意報
+  '10':{n:'大雨注意報',k:'advisory'}, '12':{n:'大雪注意報',k:'advisory'},
+  '13':{n:'風雪注意報',k:'advisory'}, '14':{n:'雷注意報',k:'advisory'},
+  '15':{n:'強風注意報',k:'advisory'}, '16':{n:'波浪注意報',k:'advisory'},
+  '17':{n:'融雪注意報',k:'advisory'}, '18':{n:'洪水注意報',k:'advisory'},
+  '19':{n:'高潮注意報',k:'advisory'}, '20':{n:'濃霧注意報',k:'advisory'},
+  '21':{n:'乾燥注意報',k:'advisory'}, '22':{n:'なだれ注意報',k:'advisory'},
+  '23':{n:'低温注意報',k:'advisory'}, '24':{n:'霜注意報',k:'advisory'},
+  '25':{n:'着氷注意報',k:'advisory'}, '26':{n:'着雪注意報',k:'advisory'},
+  '27':{n:'その他の注意報',k:'advisory'},
+};
+
+function fmtTime(iso){
+  try{ const d=new Date(iso);
+    return d.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  }catch(e){ return iso||''; }
+}
+function fmtClock(d){
+  try{ return d.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; }
+}
+const POLL_MS = 5*60*1000; // 自動再取得の間隔
+
+// 定例休園日チェック（日曜・祝日・年末年始）。holidays は {YYYY-MM-DD:名称}
+function checkCalendar(now, holidays){
+  const y=now.getFullYear(), m=now.getMonth()+1, d=now.getDate();
+  if(now.getDay()===0) return {closed:true, reason:'日曜日'};
+  if((m===12 && d>=29) || (m===1 && d<=3)) return {closed:true, reason:'年末年始（12/29〜1/3）'};
+  const key = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  if(holidays && holidays[key]) return {closed:true, reason:`祝日（${holidays[key]}）`};
+  return {closed:false};
+}
+
+// 気象警報のみで休園判定
+// 暴風警報は「発表中＝休園、解除＝開園」。実運用上16:30以降は預けないので時刻判定はしない。
+function weatherVerdict(activeCodes){
+  const special = activeCodes.filter(c=>WCODE[c]&&WCODE[c].k==='special');
+  const storm = activeCodes.some(c=>c==='05'||c==='02'); // 暴風/暴風雪警報
+  const rain  = activeCodes.some(c=>c==='03');           // 大雨警報
+  if(special.length) return {type:'close', label:'休園', reason:'特別警報 '+special.map(c=>WCODE[c].n).join('・')};
+  if(storm) return {type:'close', label:'休園', reason:'暴風警報 発表中'};
+  if(rain) return {type:'warn', label:'開園', reason:'大雨警報（危険なら保育）'};
+  return {type:'open', label:'平常', reason: activeCodes.length?'注意報のみ':'警報なし'};
+}
+// 定例休園日も加味した総合判定
+function verdictAt(activeCodes, atDate, holidays){
+  const cal=checkCalendar(atDate, holidays);
+  if(cal.closed) return {type:'close', label:'休園', reason:'定例休園（'+cal.reason+'）'};
+  return weatherVerdict(activeCodes);
+}
+// 予報の3時間ブロック用：暦は開始時刻で判定
+function verdictBlock(codes, start, holidays){
+  return verdictAt(codes, start, holidays);
+}
+function codeNames(codes){
+  if(!codes.length) return '<span class="none">警報・注意報なし</span>';
+  const order={special:0,warning:1,advisory:2};
+  return codes.slice().sort((a,b)=>(order[WCODE[a]?.k]??9)-(order[WCODE[b]?.k]??9))
+    .map(c=>WCODE[c]?WCODE[c].n:c).join('、');
+}
+
+// ====== 今後の見通し（/warning が返す風危険度の時系列を休園判定用に変換） ======
+// windRisk: 00=なし / 10=注意報級 / 20=警報級(暴風警報相当)
+function buildWindForecast(fc){
+  if(!Array.isArray(fc) || !fc.length) return null;
+  return fc.map(p=>{
+    const lv = parseInt(p.windRisk,10) || 0;
+    const codes = lv>=20 ? ['05'] : lv>=10 ? ['15'] : []; // 暴風警報 / 強風注意報 / なし
+    return {time:new Date(p.time), codes};
+  });
+}
+
+// ====== タイムライン描画 ======
+function chip(v){ return `<span class="chip ${v.type}">${v.type==='close'?'🚫':v.type==='warn'?'⚠️':'✅'} ${v.label}</span>`; }
+
+// ====== 今日の警報の経緯（/history） ======
+async function loadHistory(){
+  const wrap=document.getElementById('histWrap');
+  let data;
+  try{
+    const r=await fetch('/history',{cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    data=await r.json();
+    if(data.error) throw new Error(data.error);
+  }catch(e){ if(wrap) wrap.style.display='none'; return; }
+
+  const events=(data.events||[]);
+  if(!events.length){ if(wrap) wrap.style.display='none'; return; }
+  if(wrap) wrap.style.display='';
+
+  let html='<div class="tl-sec">';
+  // 新しい順に表示（最新を上に）
+  events.slice().reverse().forEach((ev,idx)=>{
+    const isLatest = idx===0;
+    const codes = (ev.closure||[]).map(c=>c.code);
+    const v = weatherVerdict(codes);
+    const t = fmtTime(ev.time);
+    const names = (ev.closure&&ev.closure.length)
+      ? ev.closure.map(c=>c.name).join('、')
+      : '<span class="none">暴風警報など休園基準の警報は解除</span>';
+    html+=`<div class="tl-row ${isLatest?'tl-now':''}">
+      <div class="tl-time">${t}${isLatest?'<br><b>（最新）</b>':''}</div>
+      <div class="tl-body">${chip(v)}
+        <div class="tl-codes">${names}</div></div></div>`;
+  });
+  html+='<p class="tl-note">※気象庁フィードにある範囲（直近）の発表・解除を再構成。最初の行はフィード内で最初に確認できた状態で、実際の発表はそれ以前のことがあります。</p>';
+  html+='</div>';
+  document.getElementById('history').innerHTML=html;
+}
+
+function renderTimeline(forecast, holidays){
+  // 見通しが取得できないときはセクションごと非表示にする
+  const wrap=document.getElementById('tlWrap');
+  if(!forecast || !forecast.length){ if(wrap) wrap.style.display='none'; return; }
+  if(wrap) wrap.style.display='';
+
+  let html='';
+  // --- 今後の見通し ---
+  html+='<div class="tl-sec"><h3>今後の見通し（暴風の予想・気象庁の時系列）</h3>'
+       +'<p class="tl-note">午後も暴風警報級が続くか＝休園が続くか、解除されて開園になるかの目安です。</p>';
+  if(forecast && forecast.length){
+    // 連続して同じ状態の区間をまとめる
+    const segs=[];
+    forecast.forEach(p=>{
+      const v=verdictBlock(p.codes, p.time, holidays);
+      const key=p.codes.slice().sort().join(',')+'|'+v.type;
+      const last=segs[segs.length-1];
+      if(last && last.key===key){ last.end=p.time; }
+      else segs.push({key, codes:p.codes, v, start:p.time, end:p.time});
+    });
+    segs.forEach(s=>{
+      const range = (+s.end>+s.start)
+        ? `${fmtTime(s.start.toISOString())}<br>〜${fmtTime(new Date(s.end.getTime()+3*3600*1000).toISOString())}`
+        : `${fmtTime(s.start.toISOString())}<br>〜${fmtTime(new Date(s.start.getTime()+3*3600*1000).toISOString())}`;
+      html+=`<div class="tl-row">
+        <div class="tl-time">${range}</div>
+        <div class="tl-body">${chip(s.v)}
+          <div class="tl-codes">${codeNames(s.codes)}<br><span class="tl-note">${s.v.reason}</span></div></div></div>`;
+    });
+    html+='<p class="tl-note">※気象庁の「風危険度」予想（刈谷市・陸上、3時間刻み）にもとづきます。警報級の時間帯を休園として表示。注意報級・なしは開園の目安です。実際の発表・解除で変わります。</p>';
+  }else{
+    html+='<p class="tl-empty">気象庁の見通しデータ（時系列）が現在取得できません。現況は上の自動判定をご覧ください。</p>';
+  }
+  html+='</div>';
+
+  document.getElementById('timeline').innerHTML=html;
+}
+
+function setAuto(type, verdict, reasonHtml, badgesHtml, metaHtml){
+  const el=document.getElementById('auto');
+  el.className = 'auto '+type;
+  const icon = type==='close'?'🚫': type==='open'?'✅': type==='warn'?'⚠️':'ℹ️';
+  document.getElementById('autoBody').innerHTML =
+    `<div class="auto-verdict">${icon} ${verdict}</div>`+
+    (reasonHtml?`<div class="auto-reason">${reasonHtml}</div>`:'')+
+    (badgesHtml?`<div class="auto-warnings">${badgesHtml}</div>`:'');
+  document.getElementById('autoMeta').innerHTML = metaHtml||'';
+}
+
+async function loadAuto(){
+  const el=document.getElementById('auto');
+  el.classList.add('loading');
+  setAuto('', '気象庁の警報情報を取得中…','','','');
+  const now=new Date();
+
+  // 祝日（ベストエフォート）
+  let holidays=null;
+  try{ const hr=await fetch(HOLIDAY_URL,{cache:'no-store'}); if(hr.ok) holidays=await hr.json(); }catch(e){}
+
+  // ① 現在の警報：自前プロキシ（/warning）を優先。最新のXMLから刈谷市を抽出
+  let warnings=[], reportDatetime=null, source='', forecast=null;
+  let data=null; // bosai（フォールバック用）
+  try{
+    const cr=await fetch(CURRENT_URL,{cache:'no-store'});
+    if(!cr.ok) throw new Error('proxy HTTP '+cr.status);
+    const cj=await cr.json();
+    if(cj.error) throw new Error(cj.error);
+    reportDatetime=cj.reportDatetime; source='jma-xml';
+    warnings=(cj.warnings||[])
+      .filter(w=>WCODE[w.code] && w.status!=='解除')
+      .map(w=>({code:w.code, status:w.status, ...WCODE[w.code]}));
+    forecast=buildWindForecast(cj.forecast); // 風危険度の時系列 → 休園見通し
+  }catch(eProxy){
+    // フォールバック：bosai の警報JSON（古い可能性あり）
+    try{
+      const r=await fetch(WARNING_URL,{cache:'no-store'});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      data=await r.json();
+      reportDatetime=data.reportDatetime; source='jma-bosai';
+      const at=(data.areaTypes||[]).find(a=>(a.areas||[]).some(ar=>ar.code===KARIYA_CODE));
+      const area=at?at.areas.find(ar=>ar.code===KARIYA_CODE):null;
+      if(area&&area.warnings){
+        warnings=area.warnings
+          .filter(w=>w.code&&WCODE[w.code]&&w.status!=='解除'&&w.status!=='発表警報・注意報はなし')
+          .map(w=>({code:w.code, status:w.status, ...WCODE[w.code]}));
+      }
+    }catch(eBosai){
+      el.classList.remove('loading');
+      el.className='auto error';
+      document.getElementById('autoBody').innerHTML =
+        `<div class="auto-verdict" style="color:var(--sub);font-size:1.1rem">ℹ️ 自動取得できませんでした</div>
+         <div class="auto-reason">気象庁のデータを取得できませんでした（${eProxy.message} / ${eBosai.message}）。<br>下のチェッカーで手動で確認してください。</div>`;
+      document.getElementById('autoMeta').innerHTML =
+        `<button class="btn ghost" style="margin-top:6px" onclick="loadAuto()">再試行</button>`;
+      renderTimeline(null, holidays);
+      return;
+    }
+  }
+
+  // 定例休園日（最優先）
+  const cal=checkCalendar(now, holidays);
+
+  const specials = warnings.filter(w=>w.k==='special');
+  const hasStorm = warnings.some(w=>w.code==='05'||w.code==='02'); // 暴風/暴風雪警報
+  const hasHeavyRain = warnings.some(w=>w.code==='03');            // 大雨警報
+
+  // バッジ
+  const order={special:0,warning:1,advisory:2};
+  const badges = warnings.sort((a,b)=>order[a.k]-order[b.k])
+    .map(w=>`<span class="wbadge ${w.k}">${w.n}</span>`).join('') ||
+    `<span class="wbadge advisory">発表中の警報・注意報なし</span>`;
+
+  const jmaLink = `<a href="https://www.jma.go.jp/bosai/warning/#area_type=class20s&area_code=${KARIYA_CODE}" target="_blank" rel="noopener">気象庁（刈谷市）</a>`;
+  const ageH = (now - new Date(reportDatetime)) / 3600000; // 最終発表からの経過時間(h)
+  const stale = isFinite(ageH) && ageH > 12;               // 12時間以上前なら信頼できない
+  const staleNote = stale
+    ? `<div class="auto-note" style="color:#b91c1c;background:#fef2f2;border:1px solid #fca5a5">`+
+      `⚠️ 気象庁の<b>最終発表が約${Math.floor(ageH)}時間前</b>と古く、データを正しく取得できていない可能性があります。`+
+      `端末の日時設定や通信を確認し、最新は${jmaLink}で直接ご確認ください。`+
+      `<button class="btn ghost" style="margin-top:6px;padding:8px 12px" onclick="loadAuto()">↻ 再取得</button></div>`
+    : '';
+  const srcLabel = source==='jma-xml' ? '気象庁 警報XML（最新）' : '気象庁 bosai（予備）';
+  const nextRefresh = new Date(now.getTime() + POLL_MS);
+  const meta =
+    `警報の最終発表：${fmtTime(reportDatetime)}（${srcLabel}）<br>`+
+    `次回更新：警報・注意報は気象状況により<b>随時更新</b>（固定時刻なし）。このアプリが約5分ごとに自動再取得します（次回 ${fmtClock(nextRefresh)} 頃）<br>`+
+    `確認時刻：${fmtTime(now.toISOString())}（端末時刻）　対象：刈谷市（愛知県）　出典：${jmaLink}`+
+    staleNote+
+    `<div class="auto-note">⚠️ 自動判定は<b>気象警報のみ</b>です。地震・津波・河川の避難情報・南海トラフ臨時情報は対象外なので、その場合は下のチェッカーをお使いください。最終判断は園と「刈谷市メール配信サービス」に従ってください。</div>`;
+
+  el.classList.remove('loading');
+
+  // ===== 休園判定 =====
+  if(stale){
+    // 警報データが古いときは「平常」と誤って言い切らず、判定を保留する
+    setAuto('warn','⚠️ 最新の警報データを取得できていません',
+      `気象庁の警報データが<b>約${Math.floor(ageH)}時間前から更新されていません</b>（最終発表 ${fmtTime(reportDatetime)}）。`+
+      `この古いデータでは現在の休園判定ができません。お手数ですが ${jmaLink} で直接ご確認ください。`, badges, meta);
+  }else if(cal.closed){
+    setAuto('close','本日は休園です（定例休園日）',
+      `定例休園日：<b>${cal.reason}</b>。気象警報の有無にかかわらず休園です。`, badges, meta);
+  }else if(specials.length){
+    setAuto('close','休園基準に該当しています',
+      `特別警報が発表中です（<b>${specials.map(s=>s.n).join('・')}</b>）。当日午前中に発表中の特別警報は休園です。`,
+      badges, meta);
+  }else if(hasStorm){
+    setAuto('close','休園です',
+      `暴風警報が<b>発表中</b>です → 休園です。<br><b>警報が解除されれば登園できます</b>（解除されるまでは自宅でお待ちください）。`, badges, meta);
+  }else if(hasHeavyRain){
+    setAuto('warn','開園（休園基準には非該当）',
+      `大雨警報（レベル3）が発表中です。開園しますが、登園が危険な場合は安全になるまで園でお預かりします。`, badges, meta);
+  }else{
+    const onlyAdvisory = warnings.length>0;
+    setAuto('open','休園基準に該当する警報はありません',
+      onlyAdvisory
+        ? `発表中は注意報レベルのみで、しおりの休園基準（特別警報・暴風警報・大雨警報）には該当しません。`
+        : `現在、刈谷市に休園基準となる気象警報は発表されていません。`,
+      badges, meta);
+  }
+
+  // 今後の見通しを描画（新しいデータがあるときのみ）
+  renderTimeline(forecast, holidays);
+  // 今日の警報の経緯
+  loadHistory();
+}
+
+loadAuto();
+// 開いている間は5分ごとに自動再取得
+setInterval(loadAuto, POLL_MS);
+</script>
+</body>
+</html>
