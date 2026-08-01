@@ -6,6 +6,7 @@
 - `index.html`：アプリ本体（静的）
 - `functions/warning.js` `functions/history.js`：Cloudflare Pages Functions。**気象庁の公開XMLフィード**（`data.jma.go.jp`）を取得（APIキー不要）
 - ホスティング：Cloudflare Pages（**hoiku-kyuen-checker.pages.dev**）
+- アイコン：`favicon.ico`（16/32/48）・`icon-192.png`・`icon-512.png`・`icon-maskable-512.png` ＋ `manifest.json`（Chrome のタブ／ショートカット／PWA 用）
 
 ## デプロイ
 - `main` に push → GitHub Actions が `<リポジトリ名>.pages.dev` へ自動デプロイ（`.github/workflows/deploy.yml`、プロジェクト名＝リポジトリ名＝`hoiku-kyuen-checker`）。
